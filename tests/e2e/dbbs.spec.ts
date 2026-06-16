@@ -307,3 +307,25 @@ test("17) connection form lists databases to pick from", async ({ page }) => {
   await expect(page.getByTestId("db-picker")).toBeHidden();
   await expect(page.getByTestId("test-result")).toBeHidden();
 });
+
+test("19) engine selector: MariaDB works, unsupported engine is gated", async ({ page }) => {
+  await page.goto("/connections/new");
+
+  // Unsupported engine → coming-soon note + disabled actions.
+  await selectOption(page, "engine-select", "PostgreSQL");
+  await expect(page.getByTestId("engine-coming-soon")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Test connection" })).toBeDisabled();
+
+  // Supported engine → note gone, actions enabled.
+  await selectOption(page, "engine-select", "MariaDB");
+  await expect(page.getByTestId("engine-coming-soon")).toBeHidden();
+  await expect(page.getByRole("button", { name: "Test connection" })).toBeEnabled();
+
+  // A MariaDB-engine connection tests via the shared mysql tooling.
+  await page.getByLabel("Host").fill("mysql-a");
+  await page.getByLabel("Port").fill("3306");
+  await page.getByLabel("User").fill("root");
+  await page.getByLabel("Password", { exact: false }).fill("root");
+  await page.getByRole("button", { name: "Test connection" }).click();
+  await expect(page.getByTestId("test-result")).toContainText("Connected", { timeout: 30_000 });
+});

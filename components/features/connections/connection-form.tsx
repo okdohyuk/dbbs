@@ -22,7 +22,13 @@ import {
   testConnectionAction,
   listDatabasesForCredentialsAction,
 } from "@/lib/actions/connections";
-import type { ConnectionPublic, ConnectionTestResult } from "@/lib/types";
+import {
+  ENGINES,
+  DEFAULT_ENGINE,
+  getEngineInfo,
+  isEngineSupported,
+} from "@/lib/engines";
+import type { ConnectionPublic, ConnectionTestResult, Engine } from "@/lib/types";
 
 type ProjectOption = { id: string; name: string };
 
@@ -42,6 +48,7 @@ export function ConnectionForm({
   const [projectId, setProjectId] = useState(
     connection?.projectId ?? defaultProjectId ?? projects[0]?.id ?? "",
   );
+  const [engine, setEngine] = useState<Engine>(connection?.engine ?? DEFAULT_ENGINE);
   const [name, setName] = useState(connection?.name ?? "");
   const [host, setHost] = useState(connection?.host ?? "127.0.0.1");
   const [port, setPort] = useState(String(connection?.port ?? 3306));
@@ -56,10 +63,13 @@ export function ConnectionForm({
   const [testing, startTesting] = useTransition();
   const [saving, startSaving] = useTransition();
 
+  const supported = isEngineSupported(engine);
+
   function handleTest() {
     setTestResult(null);
     startTesting(async () => {
       const res = await testConnectionAction({
+        engine,
         host,
         port,
         user,
@@ -68,7 +78,13 @@ export function ConnectionForm({
       });
       setTestResult(res);
       if (res.ok) {
-        const dbs = await listDatabasesForCredentialsAction({ host, port, user, password });
+        const dbs = await listDatabasesForCredentialsAction({
+          engine,
+          host,
+          port,
+          user,
+          password,
+        });
         setAvailableDbs(dbs.ok ? dbs.data : []);
       } else {
         setAvailableDbs([]);
@@ -96,6 +112,7 @@ export function ConnectionForm({
         : await createConnectionAction({
             projectId,
             name,
+            engine,
             host,
             port,
             user,
@@ -135,6 +152,45 @@ export function ConnectionForm({
           </Select>
         </div>
       )}
+
+      <div className="space-y-2">
+        <Label htmlFor="engine">{t("connectionForm.engine")}</Label>
+        <Select
+          value={engine}
+          onValueChange={(v) => {
+            const next = v as Engine;
+            setEngine(next);
+            if (!isEdit) setPort(String(getEngineInfo(next).defaultPort));
+            invalidateTest();
+          }}
+          disabled={isEdit}
+          items={Object.fromEntries(ENGINES.map((e) => [e.key, e.label]))}
+        >
+          <SelectTrigger id="engine" className="w-full" data-testid="engine-select">
+            <SelectValue placeholder={t("connectionForm.selectEngine")} />
+          </SelectTrigger>
+          <SelectContent>
+            {ENGINES.map((e) => (
+              <SelectItem key={e.key} value={e.key}>
+                {e.label}
+                {!e.supported ? (
+                  <span className="ml-2 text-xs text-muted-foreground">
+                    {t("connectionForm.comingSoon")}
+                  </span>
+                ) : null}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {!supported ? (
+          <p
+            className="rounded-[10px] border border-warning/40 bg-warning/10 px-2.5 py-1.5 text-xs text-warning-foreground"
+            data-testid="engine-coming-soon"
+          >
+            {t("connectionForm.engineComingSoon", { engine: getEngineInfo(engine).label })}
+          </p>
+        ) : null}
+      </div>
 
       <div className="space-y-2">
         <Label htmlFor="name">{t("connectionForm.connectionName")}</Label>
@@ -262,11 +318,11 @@ export function ConnectionForm({
       )}
 
       <div className="flex items-center gap-2 pt-1">
-        <Button variant="outline" onClick={handleTest} disabled={testing}>
+        <Button variant="outline" onClick={handleTest} disabled={testing || !supported}>
           {testing ? <Loader2 className="animate-spin" /> : <Plug />}
           {t("connectionForm.testConnection")}
         </Button>
-        <Button onClick={handleSave} disabled={saving || !name || !projectId}>
+        <Button onClick={handleSave} disabled={saving || !supported || !name || !projectId}>
           {saving ? <Loader2 className="animate-spin" /> : null}
           {isEdit ? t("common.saveChanges") : t("connectionForm.createConnection")}
         </Button>

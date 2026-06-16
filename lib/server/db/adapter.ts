@@ -50,8 +50,10 @@ export interface DbAdapter {
 }
 
 import { mysqlAdapter } from "@/lib/server/db/mysql/adapter";
+import { engineLabel } from "@/lib/engines";
 
 export function getAdapter(engine: Engine): DbAdapter {
-  if (engine === "mysql") return mysqlAdapter;
-  throw new Error(`Unsupported engine: ${engine}`);
+  // MySQL and MariaDB share the mysqldump/mysql tooling.
+  if (engine === "mysql" || engine === "mariadb") return mysqlAdapter;
+  throw new Error(`${engineLabel(engine)} is not supported yet`);
 }

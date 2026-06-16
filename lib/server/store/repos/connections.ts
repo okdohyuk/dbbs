@@ -4,7 +4,7 @@ import { getDb } from "@/lib/server/store/client";
 import { ensureMigrated } from "@/lib/server/store/migrate";
 import { connections } from "@/lib/server/store/schema";
 import { encryptSecret } from "@/lib/server/crypto/cipher";
-import type { Connection } from "@/lib/types";
+import type { Connection, Engine } from "@/lib/types";
 
 export async function listConnections(projectId?: string): Promise<Connection[]> {
   await ensureMigrated();
@@ -25,6 +25,7 @@ export async function getConnection(id: string): Promise<Connection | null> {
 export async function createConnection(input: {
   projectId: string;
   name: string;
+  engine: Engine;
   host: string;
   port: number;
   user: string;
@@ -37,6 +38,7 @@ export async function createConnection(input: {
     .values({
       projectId: input.projectId,
       name: input.name,
+      engine: input.engine,
       host: input.host,
       port: input.port,
       user: input.user,

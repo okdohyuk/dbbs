@@ -13,11 +13,15 @@ import { getAdapter } from "@/lib/server/db/adapter";
 import { loadConnectionConfig } from "@/lib/server/db/connection-config";
 import { toConnectionPublic } from "@/lib/dto";
 import { ok, fail, zodFieldErrors, type ActionResult } from "@/lib/actions/result";
-import type { ConnectionPublic, ConnectionTestResult, TableInfo } from "@/lib/types";
+import { ENGINES, isEngineSupported, engineLabel } from "@/lib/engines";
+import type { ConnectionPublic, ConnectionTestResult, Engine, TableInfo } from "@/lib/types";
+
+const engineEnum = z.enum(ENGINES.map((e) => e.key) as [Engine, ...Engine[]]);
 
 const baseSchema = z.object({
   projectId: z.string().uuid("Pick a project"),
   name: z.string().trim().min(1, "Name is required").max(120),
+  engine: engineEnum,
   host: z.string().trim().min(1, "Host is required").max(255),
   port: z.coerce.number().int().min(1).max(65535),
   user: z.string().trim().min(1, "User is required").max(120),
@@ -29,6 +33,7 @@ const createSchema = baseSchema.extend({
 });
 
 const rawTestSchema = z.object({
+  engine: engineEnum,
   host: z.string().trim().min(1),
   port: z.coerce.number().int().min(1).max(65535),
   user: z.string().trim().min(1),
@@ -39,6 +44,7 @@ const rawTestSchema = z.object({
 export async function createConnectionAction(input: {
   projectId: string;
   name: string;
+  engine: Engine;
   host: string;
   port: number | string;
   user: string;
@@ -47,10 +53,14 @@ export async function createConnectionAction(input: {
 }): Promise<ActionResult<ConnectionPublic>> {
   const parsed = createSchema.safeParse(input);
   if (!parsed.success) return fail("Invalid input", zodFieldErrors(parsed.error));
+  if (!isEngineSupported(parsed.data.engine)) {
+    return fail(`${engineLabel(parsed.data.engine)} is not supported yet`);
+  }
   try {
     const conn = await createConnection({
       projectId: parsed.data.projectId,
       name: parsed.data.name,
+      engine: parsed.data.engine,
       host: parsed.data.host,
       port: parsed.data.port,
       user: parsed.data.user,
@@ -108,6 +118,7 @@ export async function deleteConnectionAction(id: string): Promise<ActionResult> 
 
 /** Test arbitrary credentials entered in the form (before saving). */
 export async function testConnectionAction(input: {
+  engine: Engine;
   host: string;
   port: number | string;
   user: string;
@@ -116,14 +127,18 @@ export async function testConnectionAction(input: {
 }): Promise<ConnectionTestResult> {
   const parsed = rawTestSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid connection details" };
-  const adapter = getAdapter("mysql");
-  return adapter.testConnection({
-    host: parsed.data.host,
-    port: parsed.data.port,
-    user: parsed.data.user,
-    password: parsed.data.password,
-    database: parsed.data.database || undefined,
-  });
+  try {
+    const adapter = getAdapter(parsed.data.engine);
+    return await adapter.testConnection({
+      host: parsed.data.host,
+      port: parsed.data.port,
+      user: parsed.data.user,
+      password: parsed.data.password,
+      database: parsed.data.database || undefined,
+    });
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Engine not supported" };
+  }
 }
 
 /** Test an already-saved connection and record the result. */
@@ -169,6 +184,7 @@ export async function listTablesAction(
 
 /** List databases for credentials entered in the form (before saving). */
 export async function listDatabasesForCredentialsAction(input: {
+  engine: Engine;
   host: string;
   port: number | string;
   user: string;
@@ -177,7 +193,7 @@ export async function listDatabasesForCredentialsAction(input: {
   const parsed = rawTestSchema.omit({ database: true }).safeParse(input);
   if (!parsed.success) return fail("Invalid connection details");
   try {
-    const adapter = getAdapter("mysql");
+    const adapter = getAdapter(parsed.data.engine);
     return ok(
       await adapter.listDatabases({
         host: parsed.data.host,

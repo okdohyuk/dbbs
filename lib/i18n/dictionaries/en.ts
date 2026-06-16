@@ -233,6 +233,11 @@ const en = {
     toastCreated: "Connection created",
     project: "Project",
     selectProject: "Select a project",
+    engine: "Database type",
+    selectEngine: "Select a database type",
+    comingSoon: "· coming soon",
+    engineComingSoon:
+      "{engine} support is coming soon — MySQL and MariaDB are available now.",
     connectionName: "Connection name",
     namePlaceholder: "A — production",
     host: "Host",

@@ -22,6 +22,7 @@ import { listSnapshots } from "@/lib/server/store/repos/snapshots";
 import { deleteConnectionAction } from "@/lib/actions/connections";
 import { formatBytes, formatDateTime } from "@/lib/format";
 import { getT } from "@/lib/i18n/server";
+import { engineLabel } from "@/lib/engines";
 
 export const dynamic = "force-dynamic";
 
@@ -87,6 +88,7 @@ export default async function ConnectionDetailPage({
         </CardHeader>
         <CardContent>
           <dl className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-5">
+            <Field label={t("connectionForm.engine")} value={engineLabel(conn.engine)} />
             <Field label={t("connectionDetail.host")} value={`${conn.host}:${conn.port}`} />
             <Field label={t("connectionDetail.user")} value={conn.user} />
             <Field label={t("connectionDetail.defaultDb")} value={conn.defaultDatabase ?? "—"} />

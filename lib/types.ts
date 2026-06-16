@@ -1,7 +1,17 @@
 // Shared domain types for dbbs. Safe to import from both server and client
 // (no secrets, no node-only imports here).
 
-export type Engine = "mysql";
+export type Engine =
+  | "mysql"
+  | "mariadb"
+  | "postgresql"
+  | "mongodb"
+  | "sqlserver"
+  | "oracle"
+  | "sqlite"
+  | "redis"
+  | "elasticsearch"
+  | "db2";
 
 export type SnapshotMode = "full" | "data-only" | "schema-only";
 

@@ -14,6 +14,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/features/common/empty-state";
 import { ConfirmDeleteButton } from "@/components/features/common/confirm-delete-button";
 import { TestConnectionButton } from "@/components/features/connections/test-connection-button";
+import { EngineBadge } from "@/components/features/connections/engine-badge";
 import { listConnections } from "@/lib/server/store/repos/connections";
 import { listProjects } from "@/lib/server/store/repos/projects";
 import { deleteConnectionAction } from "@/lib/actions/connections";
@@ -79,9 +80,12 @@ export default async function ConnectionsPage() {
                 {connections.map((c) => (
                   <TableRow key={c.id}>
                     <TableCell className="pl-6 font-medium">
-                      <Link href={`/connections/${c.id}`} className="hover:text-primary">
-                        {c.name}
-                      </Link>
+                      <div className="flex items-center gap-2">
+                        <Link href={`/connections/${c.id}`} className="hover:text-primary">
+                          {c.name}
+                        </Link>
+                        <EngineBadge engine={c.engine} />
+                      </div>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {projectName(c.projectId)}
