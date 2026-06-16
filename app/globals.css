@@ -1,26 +1,173 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
+
+/* ─────────────────────────────────────────────────────────────
+   ClariTrace Design System tokens mapped onto shadcn/ui slots.
+   Source: design-system/colors_and_type.css (SIMSTECH ClariTrace).
+   Brand rule: single saturated accent rgb(0,120,248), 14px radius,
+   flat white surfaces, hairline rgb(222,226,230) strokes.
+   ───────────────────────────────────────────────────────────── */
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-sans);
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-heading: var(--font-sans);
+
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+
+  /* ClariTrace status palette (row tints / badges) */
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+
+  /* ClariTrace shadows (only dialogs + hero cards carry shadow) */
+  --shadow-dialog: 0 4px 20px 0 rgba(52, 58, 64, 0.3);
+  --shadow-card: 10px 20px 20px 0 rgba(52, 58, 64, 0.1);
+  --shadow-soft: 0 2px 8px 0 rgba(52, 58, 64, 0.08);
+
+  /* radius scale anchored to ClariTrace 14px workhorse */
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 10px);
+  --radius-2xl: calc(var(--radius) + 26px);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+:root {
+  --radius: 0.875rem; /* 14px — ClariTrace --radius-md */
+
+  --background: rgb(255, 255, 255);
+  --foreground: rgb(52, 58, 64); /* fg-strong */
+
+  --card: rgb(255, 255, 255);
+  --card-foreground: rgb(52, 58, 64);
+  --popover: rgb(255, 255, 255);
+  --popover-foreground: rgb(52, 58, 64);
+
+  --primary: rgb(0, 120, 248); /* brand blue */
+  --primary-foreground: rgb(255, 255, 255);
+
+  --secondary: rgb(241, 243, 245); /* bg-soft */
+  --secondary-foreground: rgb(52, 58, 64);
+
+  --muted: rgb(248, 249, 250); /* bg-subtle */
+  --muted-foreground: rgb(134, 142, 150); /* fg-soft */
+
+  --accent: rgb(241, 243, 245);
+  --accent-foreground: rgb(52, 58, 64);
+
+  --destructive: rgb(255, 100, 103); /* danger-500 */
+
+  --border: rgb(222, 226, 230); /* border-default */
+  --input: rgb(222, 226, 230);
+  --ring: rgb(0, 120, 248); /* focus ring = brand blue */
+
+  /* status palette */
+  --success: rgb(5, 223, 114);
+  --success-foreground: rgb(20, 83, 45);
+  --warning: rgb(253, 199, 0);
+  --warning-foreground: rgb(82, 60, 0);
+  --info: rgb(255, 146, 43);
+  --info-foreground: rgb(94, 50, 0);
+
+  /* charts (status-tinted) */
+  --chart-1: rgb(0, 120, 248);
+  --chart-2: rgb(5, 223, 114);
+  --chart-3: rgb(253, 199, 0);
+  --chart-4: rgb(255, 146, 43);
+  --chart-5: rgb(204, 93, 232);
+
+  /* sidebar — flat white, hairline border, blue accent */
+  --sidebar: rgb(255, 255, 255);
+  --sidebar-foreground: rgb(73, 80, 87); /* fg-default */
+  --sidebar-primary: rgb(0, 120, 248);
+  --sidebar-primary-foreground: rgb(255, 255, 255);
+  --sidebar-accent: rgb(248, 249, 250); /* hover tint */
+  --sidebar-accent-foreground: rgb(52, 58, 64);
+  --sidebar-border: rgb(222, 226, 230);
+  --sidebar-ring: rgb(0, 120, 248);
+}
+
+/* Dark mode in ClariTrace only restyles the chrome (GNB/sidebar);
+   the body stays light. We keep a dark sidebar variant available. */
+.dark {
+  --background: rgb(255, 255, 255);
+  --foreground: rgb(52, 58, 64);
+  --card: rgb(255, 255, 255);
+  --card-foreground: rgb(52, 58, 64);
+  --popover: rgb(255, 255, 255);
+  --popover-foreground: rgb(52, 58, 64);
+  --primary: rgb(0, 120, 248);
+  --primary-foreground: rgb(255, 255, 255);
+  --secondary: rgb(241, 243, 245);
+  --secondary-foreground: rgb(52, 58, 64);
+  --muted: rgb(248, 249, 250);
+  --muted-foreground: rgb(134, 142, 150);
+  --accent: rgb(241, 243, 245);
+  --accent-foreground: rgb(52, 58, 64);
+  --destructive: rgb(255, 100, 103);
+  --border: rgb(222, 226, 230);
+  --input: rgb(222, 226, 230);
+  --ring: rgb(0, 120, 248);
+
+  --sidebar: rgb(30, 33, 36); /* dark GNB */
+  --sidebar-foreground: rgb(222, 226, 230);
+  --sidebar-primary: rgb(81, 162, 255);
+  --sidebar-primary-foreground: rgb(255, 255, 255);
+  --sidebar-accent: rgb(68, 68, 68);
+  --sidebar-accent-foreground: rgb(255, 255, 255);
+  --sidebar-border: rgb(91, 91, 91);
+  --sidebar-ring: rgb(81, 162, 255);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+    letter-spacing: -0.005em; /* ClariTrace universal tracking */
   }
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  body {
+    @apply bg-background text-foreground;
+    line-height: 1.2;
+  }
+  html {
+    @apply font-sans;
+  }
 }

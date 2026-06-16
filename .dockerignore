@@ -1,0 +1,17 @@
+node_modules
+.next
+.git
+.gitignore
+npm-debug.log*
+README.md
+AGENTS.md
+CLAUDE.md
+.env*
+design-system
+snapshots
+data
+test-results
+playwright-report
+tests
+.DS_Store
+**/.DS_Store

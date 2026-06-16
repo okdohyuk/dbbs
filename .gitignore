@@ -39,3 +39,18 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# dbbs local data (snapshot dumps + local store)
+/snapshots/
+/data/
+
+# playwright
+/test-results/
+/playwright-report/
+/playwright/.cache/
+
+# Claude Code local data
+/.claude/
+
+# SIMSTECH ClariTrace design system — local reference only, not published
+/design-system/
