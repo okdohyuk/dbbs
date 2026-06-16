@@ -50,10 +50,12 @@ export interface DbAdapter {
 }
 
 import { mysqlAdapter } from "@/lib/server/db/mysql/adapter";
+import { postgresAdapter } from "@/lib/server/db/postgres/adapter";
 import { engineLabel } from "@/lib/engines";
 
 export function getAdapter(engine: Engine): DbAdapter {
   // MySQL and MariaDB share the mysqldump/mysql tooling.
   if (engine === "mysql" || engine === "mariadb") return mysqlAdapter;
+  if (engine === "postgresql") return postgresAdapter;
   throw new Error(`${engineLabel(engine)} is not supported yet`);
 }

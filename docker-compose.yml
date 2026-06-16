@@ -54,6 +54,24 @@ services:
       timeout: 5s
       retries: 24
 
+  # ── Demo PostgreSQL source (seeded with a table) ──
+  pg-a:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: pgtest
+    ports:
+      - "5433:5432"
+    volumes:
+      - pga_data:/var/lib/postgresql/data
+      - ./docker/postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d pgtest"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+
   # ── Demo restore target (empty server, different host than A) ──
   mysql-b:
     image: mysql:8.0
@@ -74,3 +92,4 @@ volumes:
   pgdata:
   mysqla_data:
   mysqlb_data:
+  pga_data:

@@ -34,7 +34,29 @@ export default async function globalSetup() {
     /* mysql-b may not be reachable yet — non-fatal */
   }
 
-  // 3) Clear old dump files.
+  // 3) Drop the restore target database on pg-a (exposed on :5433).
+  try {
+    const pg = postgres({
+      host: "127.0.0.1",
+      port: 5433,
+      username: "postgres",
+      password: "postgres",
+      database: "postgres",
+      max: 1,
+      connect_timeout: 8,
+      prepare: false,
+      onnotice: () => {},
+    });
+    try {
+      await pg.unsafe("DROP DATABASE IF EXISTS pg_restored WITH (FORCE)");
+    } finally {
+      await pg.end({ timeout: 5 });
+    }
+  } catch {
+    /* pg-a may not be reachable yet — non-fatal */
+  }
+
+  // 4) Clear old dump files.
   const dir = path.resolve(__dirname, "../../snapshots");
   try {
     for (const f of readdirSync(dir)) {

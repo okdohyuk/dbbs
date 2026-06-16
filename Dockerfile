@@ -31,11 +31,19 @@ LABEL org.opencontainers.image.title="DBBS — Database Backup System" \
       org.opencontainers.image.source="https://github.com/okdohyuk/dbbs" \
       org.opencontainers.image.licenses="MIT"
 
-# MySQL client tools (mysqldump / mysql) used for snapshot + restore.
-# default-mysql-client is the MariaDB client on Debian; the snapshot flag
-# builder detects the client kind and only emits compatible flags.
+# Database client tools used for snapshot + restore:
+#  - MySQL/MariaDB: default-mysql-client (MariaDB client on Debian)
+#  - PostgreSQL: postgresql-client-17 from the PGDG apt repo (client >= server)
 RUN apt-get update \
- && apt-get install -y --no-install-recommends default-mysql-client gzip ca-certificates \
+ && apt-get install -y --no-install-recommends \
+      default-mysql-client gzip ca-certificates curl gnupg \
+ && install -d /usr/share/postgresql-common/pgdg \
+ && curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+      -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+ && echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] http://apt.postgresql.org/pub/repos/apt bookworm-pgdg main" \
+      > /etc/apt/sources.list.d/pgdg.list \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends postgresql-client-17 \
  && rm -rf /var/lib/apt/lists/*
 
 RUN groupadd --system --gid 1001 nodejs \

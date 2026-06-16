@@ -3,11 +3,12 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { gunzipSync } from "node:zlib";
 import path from "node:path";
 import mysql, { type RowDataPacket } from "mysql2/promise";
+import postgres from "postgres";
 
 const SNAPSHOT_DIR = path.resolve(__dirname, "../../snapshots");
 
 // Shared state across the serial flow.
-const ids: { projectId?: string; connA?: string; connB?: string } = {};
+const ids: { projectId?: string; connA?: string; connB?: string; connPg?: string } = {};
 
 /** Pick an option from a Base UI <Select> by clicking the trigger then option. */
 async function selectOption(page: Page, triggerTestId: string, optionText: string) {
@@ -312,7 +313,7 @@ test("19) engine selector: MariaDB works, unsupported engine is gated", async ({
   await page.goto("/connections/new");
 
   // Unsupported engine → coming-soon note + disabled actions.
-  await selectOption(page, "engine-select", "PostgreSQL");
+  await selectOption(page, "engine-select", "MongoDB");
   await expect(page.getByTestId("engine-coming-soon")).toBeVisible();
   await expect(page.getByRole("button", { name: "Test connection" })).toBeDisabled();
 
@@ -328,4 +329,61 @@ test("19) engine selector: MariaDB works, unsupported engine is gated", async ({
   await page.getByLabel("Password", { exact: false }).fill("root");
   await page.getByRole("button", { name: "Test connection" }).click();
   await expect(page.getByTestId("test-result")).toContainText("Connected", { timeout: 30_000 });
+});
+
+test("20) PostgreSQL: connect, snapshot, and restore into another database", async ({ page }) => {
+  // Add a PostgreSQL connection to pg-a.
+  await page.goto("/connections/new");
+  await selectOption(page, "engine-select", "PostgreSQL");
+  await page.getByLabel("Connection name").fill("Conn PG");
+  await page.getByLabel("Host").fill("pg-a");
+  await page.getByLabel("Port").fill("5432");
+  await page.getByLabel("User").fill("postgres");
+  await page.getByLabel("Password", { exact: false }).fill("postgres");
+  await page.getByLabel("Default database").fill("pgtest");
+  await page.getByRole("button", { name: "Test connection" }).click();
+  await expect(page.getByTestId("test-result")).toContainText("Connected", { timeout: 30_000 });
+  await page.getByRole("button", { name: "Create connection" }).click();
+  await page.waitForURL(/\/connections\/[0-9a-f-]{36}/);
+  ids.connPg = idFromUrl(page.url(), "connections");
+
+  // Browse tables — the seeded `widgets` table is present.
+  await page.goto(`/tables/${ids.connPg}`);
+  await expect(page.getByText("widgets")).toBeVisible({ timeout: 30_000 });
+
+  // Snapshot pgtest.
+  await page.goto(`/snapshots/new?connectionId=${ids.connPg}&database=pgtest`);
+  await page.getByLabel("Snapshot name").fill("pg snap");
+  await page.getByRole("button", { name: "Create snapshot" }).click();
+  await expect(page.locator('[data-testid="job-progress"][data-phase="completed"]')).toBeVisible({
+    timeout: 60_000,
+  });
+
+  // Restore into a new database on the same server.
+  await page.goto("/restore");
+  await selectOption(page, "restore-snapshot", "pg snap");
+  await selectOption(page, "restore-target", "Conn PG");
+  await page.getByLabel("Target database").fill("pg_restored");
+  await page.getByRole("button", { name: "Restore", exact: true }).click();
+  await expect(page.locator('[data-testid="job-progress"][data-phase="completed"]')).toBeVisible({
+    timeout: 60_000,
+  });
+
+  // Verify the restored data via a direct connection to pg-a (:5433).
+  const pg = postgres({
+    host: "127.0.0.1",
+    port: 5433,
+    username: "postgres",
+    password: "postgres",
+    database: "pg_restored",
+    max: 1,
+    prepare: false,
+    onnotice: () => {},
+  });
+  try {
+    const rows = await pg<{ name: string }[]>`SELECT name FROM widgets ORDER BY id`;
+    expect(rows.map((r) => r.name)).toEqual(["alpha", "beta", "gamma"]);
+  } finally {
+    await pg.end({ timeout: 5 });
+  }
 });

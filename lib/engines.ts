@@ -15,7 +15,7 @@ export interface EngineInfo {
 export const ENGINES: EngineInfo[] = [
   { key: "mysql", label: "MySQL", defaultPort: 3306, supported: true },
   { key: "mariadb", label: "MariaDB", defaultPort: 3306, supported: true },
-  { key: "postgresql", label: "PostgreSQL", defaultPort: 5432, supported: false },
+  { key: "postgresql", label: "PostgreSQL", defaultPort: 5432, supported: true },
   { key: "mongodb", label: "MongoDB", defaultPort: 27017, supported: false },
   { key: "sqlserver", label: "Microsoft SQL Server", defaultPort: 1433, supported: false },
   { key: "oracle", label: "Oracle Database", defaultPort: 1521, supported: false },
