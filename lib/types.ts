@@ -69,7 +69,8 @@ export type ConnectionPublic = Omit<Connection, "passwordEnc"> & {
 export interface Snapshot {
   id: string;
   projectId: string;
-  sourceConnectionId: string;
+  /** Null for snapshots imported from an uploaded .sql file. */
+  sourceConnectionId: string | null;
   sourceDatabase: string;
   name: string;
   filePath: string;

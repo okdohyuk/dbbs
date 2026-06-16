@@ -88,11 +88,15 @@ export default async function SnapshotsPage() {
                   <TableRow key={s.id}>
                     <TableCell className="pl-6 font-medium">{s.name}</TableCell>
                     <TableCell className="text-muted-foreground">
-                      {connName(s.sourceConnectionId)}
+                      {s.sourceConnectionId
+                        ? connName(s.sourceConnectionId)
+                        : t("snapshotsList.uploaded")}
                     </TableCell>
                     <TableCell className="text-muted-foreground">{s.sourceDatabase}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">
-                      {summarize(s.options, t)}
+                      {s.sourceConnectionId
+                        ? summarize(s.options, t)
+                        : t("snapshotsList.imported")}
                     </TableCell>
                     <TableCell>{formatBytes(s.bytes)}</TableCell>
                     <TableCell>

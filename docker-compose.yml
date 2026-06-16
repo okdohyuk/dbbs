@@ -8,6 +8,8 @@ services:
     environment:
       DATABASE_URL: postgres://dbbs:dbbs@meta-db:5432/dbbs
       DBBS_MASTER_KEY: ${DBBS_MASTER_KEY:-dev-only-master-secret-change-me}
+      # Set DBBS_PASSWORD to enable the login gate (empty = open, no login).
+      DBBS_PASSWORD: ${DBBS_PASSWORD:-}
       SNAPSHOT_DIR: /data/snapshots
       NODE_ENV: production
     volumes:

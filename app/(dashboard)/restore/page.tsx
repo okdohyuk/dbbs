@@ -30,7 +30,9 @@ export default async function RestorePage({
       id: s.id,
       name: s.name,
       sourceDatabase: s.sourceDatabase,
-      sourceConnectionName: connName(s.sourceConnectionId),
+      sourceConnectionName: s.sourceConnectionId
+        ? connName(s.sourceConnectionId)
+        : t("snapshotsList.uploaded"),
     }));
 
   return (

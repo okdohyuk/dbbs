@@ -74,7 +74,13 @@ services:
 | `DATABASE_URL`     | PostgreSQL connection string for the metadata store                 |
 | `DBBS_MASTER_KEY`  | Secret used to derive the AES-256-GCM key (any strong string)       |
 | `SNAPSHOT_DIR`     | Directory where dump files are written (mounted volume in Docker)   |
+| `DBBS_PASSWORD`    | Optional — set to require a login before accessing the app          |
 | `DBBS_MYSQL_BIN_DIR` | Optional override for the `mysqldump`/`mysql` binary directory     |
+
+**Login gate:** set `DBBS_PASSWORD` to require a password (a signed, HTTP-only
+session cookie is issued on login). Leave it unset to run open for a single user
+on a trusted network. The app has no built-in TLS — put it behind HTTPS in
+production.
 
 Snapshot dumps are written to the mounted `SNAPSHOT_DIR`. To reach a MySQL server
 running on the host, use `host.docker.internal` as the connection host.

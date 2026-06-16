@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { HardDriveUpload, Loader2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -49,6 +50,7 @@ export function RestoreWizard({
     snapOf(firstSnapshot)?.sourceDatabase ?? "",
   );
   const [existingDbs, setExistingDbs] = useState<string[]>([]);
+  const [mariadbCompat, setMariadbCompat] = useState(true);
   const [jobId, setJobId] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [loadingDbs, startLoadDbs] = useTransition();
@@ -62,9 +64,21 @@ export function RestoreWizard({
     });
   }
 
+  // Load existing databases for the initially-selected target so the overwrite
+  // warning + chips work without changing the Select first.
+  useEffect(() => {
+    loadTargetDbs(targetConnectionId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   function handleRun() {
     startRun(async () => {
-      const res = await startRestoreAction({ snapshotId, targetConnectionId, targetDatabase });
+      const res = await startRestoreAction({
+        snapshotId,
+        targetConnectionId,
+        targetDatabase,
+        mariadbCompat,
+      });
       if (!res.ok) {
         toast.error(res.error);
         return;
@@ -136,7 +150,7 @@ export function RestoreWizard({
             if (s) setTargetDatabase(s.sourceDatabase);
           }}
         >
-          <SelectTrigger id="snapshot" className="w-full">
+          <SelectTrigger id="snapshot" data-testid="restore-snapshot" className="w-full">
             <SelectValue placeholder={t("restoreWizard.selectSnapshot")} />
           </SelectTrigger>
           <SelectContent>
@@ -210,6 +224,22 @@ export function RestoreWizard({
           </span>
         </div>
       )}
+
+      <label className="flex items-start gap-2.5 rounded-[12px] border border-border px-3 py-2.5">
+        <Checkbox
+          checked={mariadbCompat}
+          onCheckedChange={(c) => setMariadbCompat(c === true)}
+          className="mt-0.5"
+        />
+        <span className="space-y-0.5">
+          <span className="block text-sm font-medium text-foreground">
+            {t("restoreWizard.mariadbCompat")}
+          </span>
+          <span className="block text-xs text-muted-foreground">
+            {t("restoreWizard.mariadbCompatHint")}
+          </span>
+        </span>
+      </label>
 
       <div className="flex items-center gap-2 pt-1">
         <Button

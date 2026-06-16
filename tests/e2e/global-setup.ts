@@ -26,6 +26,9 @@ export default async function globalSetup() {
       password: "root",
     });
     await conn.query("DROP DATABASE IF EXISTS restored_db");
+    await conn.query("DROP DATABASE IF EXISTS uploaded_restored");
+    await conn.query("DROP DATABASE IF EXISTS maria_restored");
+    await conn.query("DROP DATABASE IF EXISTS compat_restored");
     await conn.end();
   } catch {
     /* mysql-b may not be reachable yet — non-fatal */

@@ -1,0 +1,1 @@
+ALTER TABLE "snapshots" ALTER COLUMN "source_connection_id" DROP NOT NULL;

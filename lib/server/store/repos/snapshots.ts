@@ -22,12 +22,14 @@ export async function getSnapshot(id: string): Promise<Snapshot | null> {
 
 export async function createSnapshot(input: {
   projectId: string;
-  sourceConnectionId: string;
+  sourceConnectionId: string | null;
   sourceDatabase: string;
   name: string;
   filePath: string;
   compressed: boolean;
   options: SnapshotOptions;
+  status?: JobStatus;
+  bytes?: number;
 }): Promise<Snapshot> {
   await ensureMigrated();
   const rows = await getDb()
@@ -40,7 +42,8 @@ export async function createSnapshot(input: {
       filePath: input.filePath,
       compressed: input.compressed,
       options: input.options,
-      status: "running",
+      status: input.status ?? "running",
+      bytes: input.bytes ?? 0,
     })
     .returning();
   return rows[0];

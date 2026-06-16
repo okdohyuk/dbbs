@@ -8,16 +8,19 @@ import type { ConnectionConfig, ProgressHandler } from "@/lib/server/db/adapter"
 import { findMysql } from "./locate-binary";
 import { buildRestoreArgs } from "./flags";
 import { writeDefaultsFile, removeDefaultsFile } from "./defaults-file";
+import { mariadbCompatTransform } from "./maria-compat";
 
 export async function runMysqlRestore(args: {
   cfg: ConnectionConfig;
   targetDatabase: string;
   dumpPath: string;
   compressed: boolean;
+  mariadbCompat: boolean;
   onProgress: ProgressHandler;
   signal: AbortSignal;
 }): Promise<void> {
-  const { cfg, targetDatabase, dumpPath, compressed, onProgress, signal } = args;
+  const { cfg, targetDatabase, dumpPath, compressed, mariadbCompat, onProgress, signal } =
+    args;
   const bin = await findMysql();
   const defaultsFile = await writeDefaultsFile(cfg);
   const restoreArgs = buildRestoreArgs(targetDatabase, defaultsFile);
@@ -49,11 +52,15 @@ export async function runMysqlRestore(args: {
   });
 
   try {
-    if (compressed) {
-      await pipeline(input, zlib.createGunzip(), counter, child.stdin!);
-    } else {
-      await pipeline(input, counter, child.stdin!);
-    }
+    const steps: (
+      | NodeJS.ReadableStream
+      | NodeJS.ReadWriteStream
+      | NodeJS.WritableStream
+    )[] = [input];
+    if (compressed) steps.push(zlib.createGunzip());
+    if (mariadbCompat) steps.push(mariadbCompatTransform());
+    steps.push(counter, child.stdin!);
+    await pipeline(steps);
     const code = await exited;
     if (code !== 0) {
       throw new Error(`mysql restore exited with code ${code}: ${stderr.slice(-600).trim()}`);

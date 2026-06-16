@@ -20,6 +20,7 @@ import {
   createConnectionAction,
   updateConnectionAction,
   testConnectionAction,
+  listDatabasesForCredentialsAction,
 } from "@/lib/actions/connections";
 import type { ConnectionPublic, ConnectionTestResult } from "@/lib/types";
 
@@ -51,6 +52,7 @@ export function ConnectionForm({
   );
 
   const [testResult, setTestResult] = useState<ConnectionTestResult | null>(null);
+  const [availableDbs, setAvailableDbs] = useState<string[]>([]);
   const [testing, startTesting] = useTransition();
   const [saving, startSaving] = useTransition();
 
@@ -65,7 +67,19 @@ export function ConnectionForm({
         database: defaultDatabase,
       });
       setTestResult(res);
+      if (res.ok) {
+        const dbs = await listDatabasesForCredentialsAction({ host, port, user, password });
+        setAvailableDbs(dbs.ok ? dbs.data : []);
+      } else {
+        setAvailableDbs([]);
+      }
     });
+  }
+
+  // Editing the target/credentials invalidates the previous test + db list.
+  function invalidateTest() {
+    setTestResult(null);
+    setAvailableDbs([]);
   }
 
   function handleSave() {
@@ -138,7 +152,10 @@ export function ConnectionForm({
           <Input
             id="host"
             value={host}
-            onChange={(e) => setHost(e.target.value)}
+            onChange={(e) => {
+            setHost(e.target.value);
+            invalidateTest();
+          }}
             placeholder="mysql-a or host.docker.internal"
           />
         </div>
@@ -148,7 +165,10 @@ export function ConnectionForm({
             id="port"
             inputMode="numeric"
             value={port}
-            onChange={(e) => setPort(e.target.value)}
+            onChange={(e) => {
+            setPort(e.target.value);
+            invalidateTest();
+          }}
           />
         </div>
       </div>
@@ -156,7 +176,14 @@ export function ConnectionForm({
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="user">{t("connectionForm.user")}</Label>
-          <Input id="user" value={user} onChange={(e) => setUser(e.target.value)} />
+          <Input
+            id="user"
+            value={user}
+            onChange={(e) => {
+              setUser(e.target.value);
+              invalidateTest();
+            }}
+          />
         </div>
         <div className="space-y-2">
           <Label htmlFor="password">
@@ -166,7 +193,10 @@ export function ConnectionForm({
             id="password"
             type="password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+            setPassword(e.target.value);
+            invalidateTest();
+          }}
             placeholder="••••••••"
           />
         </div>
@@ -180,6 +210,32 @@ export function ConnectionForm({
           onChange={(e) => setDefaultDatabase(e.target.value)}
           placeholder="test"
         />
+        {availableDbs.length > 0 ? (
+          <div className="space-y-1.5 pt-1" data-testid="db-picker">
+            <p className="text-xs text-muted-foreground">{t("connectionForm.pickDatabase")}</p>
+            <div className="flex flex-wrap gap-1.5">
+              {availableDbs.map((db) => (
+                <button
+                  key={db}
+                  type="button"
+                  onClick={() => setDefaultDatabase(db)}
+                  className={cn(
+                    "rounded-full border px-2.5 py-0.5 text-xs transition-colors",
+                    defaultDatabase === db
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground",
+                  )}
+                >
+                  {db}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            {t("connectionForm.loadDatabasesHint")}
+          </p>
+        )}
       </div>
 
       {testResult && (

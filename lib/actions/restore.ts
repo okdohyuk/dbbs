@@ -21,12 +21,14 @@ const startSchema = z.object({
     .min(1, "Target database is required")
     .max(120)
     .regex(/^[A-Za-z0-9_$-]+$/, "Use letters, numbers, _ - $ only"),
+  mariadbCompat: z.boolean().default(true),
 });
 
 export async function startRestoreAction(input: {
   snapshotId: string;
   targetConnectionId: string;
   targetDatabase: string;
+  mariadbCompat?: boolean;
 }): Promise<ActionResult<{ jobId: string }>> {
   const parsed = startSchema.safeParse(input);
   if (!parsed.success) return fail("Invalid input", zodFieldErrors(parsed.error));
@@ -71,6 +73,7 @@ export async function startRestoreAction(input: {
     targetDatabase: parsed.data.targetDatabase,
     dumpPath: snapshot.filePath,
     compressed: snapshot.compressed,
+    mariadbCompat: parsed.data.mariadbCompat,
     signal,
   });
 

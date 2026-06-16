@@ -92,26 +92,7 @@ export async function listTables(
   });
 }
 
-/** Verify `database` exists among the server's databases (whitelist guard). */
-export async function databaseExists(
-  cfg: ConnectionConfig,
-  database: string,
-): Promise<boolean> {
-  const all = await listDatabasesRaw(cfg);
-  return all.includes(database);
-}
-
-/** All databases including system ones (used for existence checks). */
-async function listDatabasesRaw(cfg: ConnectionConfig): Promise<string[]> {
-  const { database: _ignored, ...rest } = cfg;
-  void _ignored;
-  return withConnection(rest, async (conn) => {
-    const [rows] = await conn.query<mysql.RowDataPacket[]>("SHOW DATABASES");
-    return rows.map((r) => r.Database as string);
-  });
-}
-
-const VALID_IDENTIFIER = /^[A-Za-z0-9_$-￿]+$/;
+const VALID_IDENTIFIER = /^[A-Za-z0-9_$-]{1,120}$/;
 
 /** Create a database if it does not exist. Identifier is strictly validated. */
 export async function ensureDatabase(
@@ -123,10 +104,9 @@ export async function ensureDatabase(
   }
   const { database: _ignored, ...rest } = cfg;
   void _ignored;
+  // Validated above; also double any backticks as defense-in-depth before quoting.
+  const quoted = database.replace(/`/g, "``");
   await withConnection(rest, async (conn) => {
-    // Identifier validated above; backtick-quote and run.
-    await conn.query(
-      `CREATE DATABASE IF NOT EXISTS \`${database}\` CHARACTER SET utf8mb4`,
-    );
+    await conn.query(`CREATE DATABASE IF NOT EXISTS \`${quoted}\` CHARACTER SET utf8mb4`);
   });
 }

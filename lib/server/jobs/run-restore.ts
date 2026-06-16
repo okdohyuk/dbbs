@@ -13,9 +13,11 @@ export async function runRestoreJob(args: {
   targetDatabase: string;
   dumpPath: string;
   compressed: boolean;
+  mariadbCompat: boolean;
   signal: AbortSignal;
 }): Promise<void> {
-  const { jobId, engine, cfg, targetDatabase, dumpPath, compressed, signal } = args;
+  const { jobId, engine, cfg, targetDatabase, dumpPath, compressed, mariadbCompat, signal } =
+    args;
   try {
     const adapter = getAdapter(engine);
     await adapter.restoreSnapshot({
@@ -23,6 +25,7 @@ export async function runRestoreJob(args: {
       targetDatabase,
       dumpPath,
       compressed,
+      mariadbCompat,
       onProgress: (e) => emit(jobId, e),
       signal,
     });

@@ -2,6 +2,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { gunzipSync } from "node:zlib";
 import path from "node:path";
+import mysql, { type RowDataPacket } from "mysql2/promise";
 
 const SNAPSHOT_DIR = path.resolve(__dirname, "../../snapshots");
 
@@ -147,7 +148,39 @@ test("10) data-only snapshot omits schema", async ({ page }) => {
   expect(sql).not.toContain("CREATE TABLE");
 });
 
-test("11) language switch to Korean and back updates the UI", async ({ page }) => {
+test("12) upload a .sql file as a snapshot", async ({ page }) => {
+  await page.goto("/snapshots/new");
+  await page.getByRole("tab", { name: /Upload \.sql file/i }).click();
+  await page.getByLabel("Database name").fill("uploaded_db");
+  await page.getByLabel("Snapshot name").fill("uploaded snap");
+  const sql =
+    "CREATE TABLE IF NOT EXISTS uploaded_table (id INT PRIMARY KEY, label VARCHAR(50));\n" +
+    "INSERT INTO uploaded_table (id, label) VALUES (1,'hello'),(2,'world');\n";
+  await page.getByTestId("upload-file-input").setInputFiles({
+    name: "mydump.sql",
+    mimeType: "application/sql",
+    buffer: Buffer.from(sql),
+  });
+  await page.getByRole("button", { name: "Upload", exact: true }).click();
+  await page.waitForURL(/\/snapshots$/);
+  await expect(page.getByText("uploaded snap")).toBeVisible();
+  await expect(page.getByText("Uploaded").first()).toBeVisible();
+});
+
+test("13) restore the uploaded snapshot into B", async ({ page }) => {
+  await page.goto("/restore");
+  await selectOption(page, "restore-snapshot", "uploaded snap");
+  await selectOption(page, "restore-target", "Conn B");
+  await page.getByLabel("Target database").fill("uploaded_restored");
+  await page.getByRole("button", { name: "Restore", exact: true }).click();
+  await expect(page.locator('[data-testid="job-progress"][data-phase="completed"]')).toBeVisible({
+    timeout: 60_000,
+  });
+  await page.goto(`/tables/${ids.connB}?database=uploaded_restored`);
+  await expect(page.getByText("uploaded_table")).toBeVisible({ timeout: 30_000 });
+});
+
+test("14) language switch to Korean and back updates the UI", async ({ page }) => {
   await page.goto("/settings");
   // Switch to Korean.
   await page.getByTestId("language-switcher").click();
@@ -160,4 +193,117 @@ test("11) language switch to Korean and back updates the UI", async ({ page }) =
   await page.getByRole("option", { name: "English" }).click();
   await expect(page.getByRole("link", { name: "Overview" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
+});
+
+test("15) drag-and-drop selects a dump file", async ({ page }) => {
+  await page.goto("/snapshots/new");
+  await page.getByRole("tab", { name: /Upload \.sql file/i }).click();
+  const dropzone = page.getByTestId("upload-dropzone");
+  const dataTransfer = await page.evaluateHandle(() => {
+    const dt = new DataTransfer();
+    dt.items.add(new File(["CREATE TABLE x(id INT);"], "dropped.sql", { type: "application/sql" }));
+    return dt;
+  });
+  await dropzone.dispatchEvent("drop", { dataTransfer });
+  await expect(page.getByText("dropped.sql")).toBeVisible();
+});
+
+test("16) MariaDB-syntax dump restores into MySQL with compatibility on", async ({ page }) => {
+  // DEFAULT sysdate() is MariaDB-only and is rejected by MySQL 8 without the rewrite.
+  await page.goto("/snapshots/new");
+  await page.getByRole("tab", { name: /Upload \.sql file/i }).click();
+  await page.getByLabel("Database name").fill("maria_db");
+  await page.getByLabel("Snapshot name").fill("maria snap");
+  const sql =
+    "CREATE TABLE IF NOT EXISTS maria_test (\n" +
+    "  id INT NOT NULL AUTO_INCREMENT,\n" +
+    "  created datetime DEFAULT sysdate(),\n" +
+    "  PRIMARY KEY (id)\n" +
+    ") ENGINE=InnoDB;\n" +
+    "INSERT INTO maria_test (id) VALUES (1);\n";
+  await page.getByTestId("upload-file-input").setInputFiles({
+    name: "maria.sql",
+    mimeType: "application/sql",
+    buffer: Buffer.from(sql),
+  });
+  await page.getByRole("button", { name: "Upload", exact: true }).click();
+  await page.waitForURL(/\/snapshots$/);
+
+  await page.goto("/restore");
+  await selectOption(page, "restore-snapshot", "maria snap");
+  await selectOption(page, "restore-target", "Conn B");
+  await page.getByLabel("Target database").fill("maria_restored");
+  // MariaDB compatibility checkbox is on by default.
+  await page.getByRole("button", { name: "Restore", exact: true }).click();
+  await expect(page.locator('[data-testid="job-progress"][data-phase="completed"]')).toBeVisible({
+    timeout: 60_000,
+  });
+  await page.goto(`/tables/${ids.connB}?database=maria_restored`);
+  await expect(page.getByText("maria_test")).toBeVisible({ timeout: 30_000 });
+});
+
+test("18) compat rewrite changes DDL only, never INSERT data", async ({ page }) => {
+  await page.goto("/snapshots/new");
+  await page.getByRole("tab", { name: /Upload \.sql file/i }).click();
+  await page.getByLabel("Database name").fill("compat_db");
+  await page.getByLabel("Snapshot name").fill("compat snap");
+  const sql =
+    "CREATE TABLE IF NOT EXISTS compat_test (\n" +
+    "  id INT NOT NULL,\n" +
+    "  note VARCHAR(120),\n" +
+    "  created datetime DEFAULT sysdate(),\n" + // DDL: must be rewritten
+    "  PRIMARY KEY (id)\n" +
+    ") ENGINE=InnoDB;\n" +
+    // data containing the literal phrase: must NOT be rewritten
+    "INSERT INTO compat_test (id, note) VALUES (1, 'literal default sysdate() stays');\n";
+  await page.getByTestId("upload-file-input").setInputFiles({
+    name: "compat.sql",
+    mimeType: "application/sql",
+    buffer: Buffer.from(sql),
+  });
+  await page.getByRole("button", { name: "Upload", exact: true }).click();
+  await page.waitForURL(/\/snapshots$/);
+
+  await page.goto("/restore");
+  await selectOption(page, "restore-snapshot", "compat snap");
+  await selectOption(page, "restore-target", "Conn B");
+  await page.getByLabel("Target database").fill("compat_restored");
+  await page.getByRole("button", { name: "Restore", exact: true }).click();
+  await expect(page.locator('[data-testid="job-progress"][data-phase="completed"]')).toBeVisible({
+    timeout: 60_000,
+  });
+
+  // DDL rewrite succeeded (table exists) AND the INSERT value is byte-for-byte intact.
+  const conn = await mysql.createConnection({
+    host: "127.0.0.1",
+    port: 3308,
+    user: "root",
+    password: "root",
+    database: "compat_restored",
+  });
+  const [rows] = await conn.query<RowDataPacket[]>(
+    "SELECT note FROM compat_test WHERE id = 1",
+  );
+  await conn.end();
+  expect(rows[0]?.note).toBe("literal default sysdate() stays");
+});
+
+test("17) connection form lists databases to pick from", async ({ page }) => {
+  await page.goto("/connections/new");
+  await page.getByLabel("Host").fill("mysql-a");
+  await page.getByLabel("Port").fill("3306");
+  await page.getByLabel("User").fill("root");
+  await page.getByLabel("Password", { exact: false }).fill("root");
+  await page.getByRole("button", { name: "Test connection" }).click();
+  await expect(page.getByTestId("test-result")).toContainText("Connected", { timeout: 30_000 });
+
+  const picker = page.getByTestId("db-picker");
+  await expect(picker).toBeVisible();
+  await picker.getByRole("button", { name: "test", exact: true }).click();
+  await expect(page.getByLabel("Default database")).toHaveValue("test");
+
+  // Editing the host invalidates the stale "Connected" banner + db chips.
+  await page.getByLabel("Host").fill("mysql-changed");
+  await expect(page.getByTestId("db-picker")).toBeHidden();
+  await expect(page.getByTestId("test-result")).toBeHidden();
 });

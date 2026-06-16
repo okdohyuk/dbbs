@@ -42,6 +42,8 @@ export interface DbAdapter {
     targetDatabase: string;
     dumpPath: string;
     compressed: boolean;
+    /** Rewrite MariaDB-only syntax (sysdate()/current_timestamp() defaults) for MySQL. */
+    mariadbCompat: boolean;
     onProgress: ProgressHandler;
     signal: AbortSignal;
   }): Promise<void>;

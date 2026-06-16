@@ -41,9 +41,10 @@ export const snapshots = pgTable("snapshots", {
   projectId: uuid("project_id")
     .notNull()
     .references(() => projects.id, { onDelete: "cascade" }),
-  sourceConnectionId: uuid("source_connection_id")
-    .notNull()
-    .references(() => connections.id, { onDelete: "cascade" }),
+  // Null for snapshots imported by uploading a .sql file (no live source).
+  sourceConnectionId: uuid("source_connection_id").references(() => connections.id, {
+    onDelete: "cascade",
+  }),
   sourceDatabase: text("source_database").notNull(),
   name: text("name").notNull(),
   filePath: text("file_path").notNull(),

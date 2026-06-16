@@ -167,6 +167,30 @@ export async function listTablesAction(
   }
 }
 
+/** List databases for credentials entered in the form (before saving). */
+export async function listDatabasesForCredentialsAction(input: {
+  host: string;
+  port: number | string;
+  user: string;
+  password: string;
+}): Promise<ActionResult<string[]>> {
+  const parsed = rawTestSchema.omit({ database: true }).safeParse(input);
+  if (!parsed.success) return fail("Invalid connection details");
+  try {
+    const adapter = getAdapter("mysql");
+    return ok(
+      await adapter.listDatabases({
+        host: parsed.data.host,
+        port: parsed.data.port,
+        user: parsed.data.user,
+        password: parsed.data.password,
+      }),
+    );
+  } catch (e) {
+    return fail(e instanceof Error ? e.message : "Failed to list databases");
+  }
+}
+
 export async function getConnectionPublicAction(
   id: string,
 ): Promise<ConnectionPublic | null> {
