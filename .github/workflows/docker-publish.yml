@@ -54,3 +54,28 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  # Publish a GitHub Release for the tag once the image is on Docker Hub.
+  release:
+    needs: build-and-push
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Compute version
+        id: ver
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: DBBS ${{ github.ref_name }}
+          generate_release_notes: true
+          body: |
+            ### Docker image
+            ```bash
+            docker pull ${{ env.IMAGE }}:${{ steps.ver.outputs.version }}
+            docker pull ${{ env.IMAGE }}:latest
+            ```
+            Multi-arch (linux/amd64, linux/arm64) · [Docker Hub tags](https://hub.docker.com/r/okdohyuk/dbbs/tags)
