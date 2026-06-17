@@ -8,12 +8,20 @@ import { assertInsideSnapshotDir, slug } from "@/lib/server/paths";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /** Stream a completed snapshot's dump file to the browser as a download. */
 export async function GET(
   _req: NextRequest,
   ctx: { params: Promise<{ snapshotId: string }> },
 ) {
   const { snapshotId } = await ctx.params;
+
+  // Reject malformed ids up front so a non-UUID string can't reach the (uuid)
+  // column query and surface as a 500 instead of a clean 404.
+  if (!UUID_RE.test(snapshotId)) {
+    return NextResponse.json({ ok: false, error: "Snapshot not found" }, { status: 404 });
+  }
 
   const snap = await getSnapshot(snapshotId);
   if (!snap) {

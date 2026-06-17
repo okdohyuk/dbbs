@@ -452,3 +452,14 @@ test("26) a completed snapshot dump can be downloaded", async ({ page }) => {
   const savedTo = await download.path();
   expect(statSync(savedTo).size).toBeGreaterThan(0);
 });
+
+test("27) download of an invalid or unknown snapshot id returns 404 (not 500)", async ({
+  page,
+}) => {
+  const malformed = await page.request.get("/api/snapshots/not-a-uuid/download");
+  expect(malformed.status()).toBe(404);
+  const missing = await page.request.get(
+    "/api/snapshots/00000000-0000-0000-0000-000000000000/download",
+  );
+  expect(missing.status()).toBe(404);
+});
