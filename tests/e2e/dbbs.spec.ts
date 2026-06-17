@@ -387,3 +387,68 @@ test("20) PostgreSQL: connect, snapshot, and restore into another database", asy
     await pg.end({ timeout: 5 });
   }
 });
+
+test("21) editing a connection saves (regression)", async ({ page }) => {
+  await page.goto(`/connections/${ids.connA}/edit`);
+  await page.getByLabel("Connection name").fill("Conn A edited");
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await page.waitForURL(/\/connections\/[0-9a-f-]{36}$/);
+  await expect(page.getByRole("heading", { name: "Conn A edited" })).toBeVisible();
+});
+
+test("22) new connection can be cloned from an existing one", async ({ page }) => {
+  await page.goto("/connections/new");
+  await selectOption(page, "clone-source", "Conn B");
+  await expect(page.getByLabel("Host")).toHaveValue("mysql-b");
+  await expect(page.getByLabel("User")).toHaveValue("root");
+  await expect(page.getByLabel("Connection name")).toHaveValue("Conn B (copy)");
+});
+
+test("23) duplicate connection name is rejected", async ({ page }) => {
+  await page.goto("/connections/new");
+  await page.getByLabel("Connection name").fill("Conn B");
+  await page.getByLabel("Host").fill("mysql-a");
+  await page.getByLabel("User").fill("root");
+  await page.getByLabel("Password", { exact: false }).fill("root");
+  await page.getByRole("button", { name: "Create connection" }).click();
+  await expect(page.getByText(/already exists/i)).toBeVisible();
+});
+
+test("24) a failed job shows the real error message", async ({ page }) => {
+  // Restoring a MySQL dump into a PostgreSQL target fails — the exact error must surface.
+  await page.goto("/restore");
+  await selectOption(page, "restore-snapshot", "full snap");
+  await selectOption(page, "restore-target", "Conn PG");
+  await page.getByLabel("Target database").fill("mysql_into_pg");
+  await page.getByRole("button", { name: "Restore", exact: true }).click();
+  await expect(page.locator('[data-testid="job-progress"][data-phase="failed"]')).toBeVisible({
+    timeout: 60_000,
+  });
+  const err = page.getByTestId("job-error");
+  await expect(err).toBeVisible();
+  await expect(err).toContainText(/error|psql|syntax/i);
+});
+
+test("25) top nav title reflects DBBS_COMPANY branding", async ({ page }) => {
+  await page.goto("/dashboard");
+  const header = page.locator("header").first();
+  const company = process.env.DBBS_COMPANY?.trim();
+  if (company) {
+    // e.g. "Acme's DBBS" (en) / "Acme의 DBBS" (ko) — both contain company + DBBS.
+    await expect(header).toContainText(company);
+    await expect(header).toContainText("DBBS");
+  } else {
+    await expect(header.getByText("DBBS", { exact: true })).toBeVisible();
+  }
+});
+
+test("26) a completed snapshot dump can be downloaded", async ({ page }) => {
+  await page.goto("/snapshots");
+  const row = page.getByRole("row").filter({ hasText: "full snap" }).first();
+  const downloadPromise = page.waitForEvent("download");
+  await row.getByRole("link", { name: /download/i }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(/\.sql(\.gz)?$/);
+  const savedTo = await download.path();
+  expect(statSync(savedTo).size).toBeGreaterThan(0);
+});

@@ -24,7 +24,7 @@ export function JobProgress({
 }: {
   jobId: string;
   runningLabel?: string;
-  onDone?: (status: Phase) => void;
+  onDone?: (status: Phase, error?: string) => void;
 }) {
   const t = useT();
   const router = useRouter();
@@ -37,6 +37,7 @@ export function JobProgress({
   const [bytes, setBytes] = useState(0);
   const [log, setLog] = useState("");
   const [phase, setPhase] = useState<Phase>("running");
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const es = new EventSource(`/api/jobs/${jobId}/stream`);
@@ -46,14 +47,16 @@ export function JobProgress({
         bytesWritten?: number;
         message?: string;
         status?: Phase;
+        error?: string;
       };
       if (typeof e.bytesWritten === "number") setBytes(e.bytesWritten);
       if (e.type === "log" && e.message) setLog(e.message);
       if (e.type === "final") {
         const status = e.status ?? "completed";
         setPhase(status);
+        if (e.error) setError(e.error);
         es.close();
-        onDone?.(status);
+        onDone?.(status, e.error);
         router.refresh();
       }
     };
@@ -63,11 +66,15 @@ export function JobProgress({
   }, [jobId]);
 
   return (
-    <div className="space-y-3 rounded-[14px] border border-border bg-muted/30 p-4" data-testid="job-progress" data-phase={phase}>
+    <div
+      className="space-y-3 rounded-[14px] border border-border bg-muted/30 p-4"
+      data-testid="job-progress"
+      data-phase={phase}
+    >
       <div className="flex items-center justify-between gap-2">
         <span className="flex items-center gap-2 text-sm font-medium">
           {ICONS[phase]}
-          {phase === "running" ? runningLabel ?? LABELS.running : LABELS[phase]}
+          {phase === "running" ? (runningLabel ?? LABELS.running) : LABELS[phase]}
         </span>
         <span className="text-sm tabular-nums text-muted-foreground">
           {t("jobProgress.transferred", { bytes: formatBytes(bytes) })}
@@ -86,7 +93,17 @@ export function JobProgress({
         />
       </div>
 
-      {log ? (
+      {error ? (
+        <div
+          className="space-y-1 rounded-[10px] border border-destructive/30 bg-destructive/10 p-2.5 text-sm text-destructive"
+          data-testid="job-error"
+        >
+          <p className="font-medium">{t("jobProgress.errorTitle")}</p>
+          <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-words font-mono text-xs">
+            {error}
+          </pre>
+        </div>
+      ) : log ? (
         <pre className="max-h-24 overflow-auto rounded-[10px] bg-background p-2 font-mono text-xs text-muted-foreground">
           {log}
         </pre>

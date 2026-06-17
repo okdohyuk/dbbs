@@ -49,6 +49,7 @@ export default async function globalSetup() {
     });
     try {
       await pg.unsafe("DROP DATABASE IF EXISTS pg_restored WITH (FORCE)");
+      await pg.unsafe("DROP DATABASE IF EXISTS mysql_into_pg WITH (FORCE)");
     } finally {
       await pg.end({ timeout: 5 });
     }

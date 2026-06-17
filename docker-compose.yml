@@ -10,6 +10,8 @@ services:
       DBBS_MASTER_KEY: ${DBBS_MASTER_KEY:-dev-only-master-secret-change-me}
       # Set DBBS_PASSWORD to enable the login gate (empty = open, no login).
       DBBS_PASSWORD: ${DBBS_PASSWORD:-}
+      # Company name shown in the top nav title, e.g. "Acme's DBBS" (empty = plain "DBBS").
+      DBBS_COMPANY: ${DBBS_COMPANY:-}
       SNAPSHOT_DIR: /data/snapshots
       NODE_ENV: production
     volumes:

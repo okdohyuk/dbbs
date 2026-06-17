@@ -69,10 +69,10 @@ export function SnapshotWizard({
         <JobProgress
           jobId={snapshotId}
           runningLabel={t("snapshotWizard.dumpingLabel")}
-          onDone={(status) => {
+          onDone={(status, error) => {
             setDone(true);
             if (status === "completed") toast.success(t("snapshotWizard.completedToast"));
-            else if (status === "failed") toast.error(t("snapshotWizard.failedToast"));
+            else if (status === "failed") toast.error(error ?? t("snapshotWizard.failedToast"));
           }}
         />
         {done && (

@@ -2,6 +2,7 @@ import "server-only";
 import { getAdapter } from "@/lib/server/db/adapter";
 import type { ConnectionConfig } from "@/lib/server/db/adapter";
 import { emit, finishJob } from "@/lib/server/jobs/manager";
+import { describeJobError } from "@/lib/server/jobs/job-error";
 import { updateRestoreJob } from "@/lib/server/store/repos/jobs";
 import type { Engine } from "@/lib/types";
 
@@ -32,7 +33,7 @@ export async function runRestoreJob(args: {
     await updateRestoreJob(jobId, { status: "completed", finishedAt: new Date() });
     finishJob(jobId, "completed");
   } catch (e) {
-    const message = e instanceof Error ? e.message : "Restore failed";
+    const message = describeJobError(e, "Restore failed");
     await updateRestoreJob(jobId, {
       status: "failed",
       error: message,

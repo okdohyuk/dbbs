@@ -8,7 +8,9 @@ import {
   deleteConnection,
   markConnectionTested,
   getConnection,
+  connectionNameExists,
 } from "@/lib/server/store/repos/connections";
+import { getT } from "@/lib/i18n/server";
 import { getAdapter } from "@/lib/server/db/adapter";
 import { loadConnectionConfig } from "@/lib/server/db/connection-config";
 import { toConnectionPublic } from "@/lib/dto";
@@ -56,6 +58,12 @@ export async function createConnectionAction(input: {
   if (!isEngineSupported(parsed.data.engine)) {
     return fail(`${engineLabel(parsed.data.engine)} is not supported yet`);
   }
+  if (await connectionNameExists(parsed.data.projectId, parsed.data.name)) {
+    const t = await getT();
+    return fail(t("connectionForm.duplicateName", { name: parsed.data.name }), {
+      name: t("connectionForm.duplicateName", { name: parsed.data.name }),
+    });
+  }
   try {
     const conn = await createConnection({
       projectId: parsed.data.projectId,
@@ -86,8 +94,19 @@ export async function updateConnectionAction(
     defaultDatabase?: string;
   },
 ): Promise<ActionResult<ConnectionPublic>> {
-  const parsed = baseSchema.omit({ projectId: true }).safeParse(input);
+  // engine is not editable after creation, so it is omitted here.
+  const parsed = baseSchema.omit({ projectId: true, engine: true }).safeParse(input);
   if (!parsed.success) return fail("Invalid input", zodFieldErrors(parsed.error));
+
+  const existing = await getConnection(id);
+  if (!existing) return fail("Connection not found");
+  if (await connectionNameExists(existing.projectId, parsed.data.name, id)) {
+    const t = await getT();
+    return fail(t("connectionForm.duplicateName", { name: parsed.data.name }), {
+      name: t("connectionForm.duplicateName", { name: parsed.data.name }),
+    });
+  }
+
   try {
     const conn = await updateConnection(id, {
       name: parsed.data.name,

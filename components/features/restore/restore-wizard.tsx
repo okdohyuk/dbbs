@@ -112,10 +112,10 @@ export function RestoreWizard({
         <JobProgress
           jobId={jobId}
           runningLabel={t("restoreWizard.runningLabel")}
-          onDone={(status) => {
+          onDone={(status, error) => {
             setDone(true);
             if (status === "completed") toast.success(t("restoreWizard.restoreCompleted"));
-            else if (status === "failed") toast.error(t("restoreWizard.restoreFailed"));
+            else if (status === "failed") toast.error(error ?? t("restoreWizard.restoreFailed"));
           }}
         />
         {done && (

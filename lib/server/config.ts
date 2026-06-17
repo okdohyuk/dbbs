@@ -28,3 +28,10 @@ export function masterSecret(): string | undefined {
 export function mysqlBinDirOverride(): string | undefined {
   return process.env.DBBS_MYSQL_BIN_DIR || undefined;
 }
+
+/** Optional company/organization name shown in the top navigation title
+ *  (e.g. "Acme's DBBS"). Empty/unset shows the plain "DBBS" title. */
+export function companyName(): string | undefined {
+  const name = process.env.DBBS_COMPANY?.trim();
+  return name ? name.slice(0, 64) : undefined;
+}

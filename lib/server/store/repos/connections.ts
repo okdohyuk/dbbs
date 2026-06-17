@@ -1,10 +1,32 @@
 import "server-only";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and, ne, sql } from "drizzle-orm";
 import { getDb } from "@/lib/server/store/client";
 import { ensureMigrated } from "@/lib/server/store/migrate";
 import { connections } from "@/lib/server/store/schema";
 import { encryptSecret } from "@/lib/server/crypto/cipher";
 import type { Connection, Engine } from "@/lib/types";
+
+/** Whether a connection with this name already exists in the project
+ *  (case-insensitive), optionally excluding one connection (for updates). */
+export async function connectionNameExists(
+  projectId: string,
+  name: string,
+  excludeId?: string,
+): Promise<boolean> {
+  await ensureMigrated();
+  const rows = await getDb()
+    .select({ id: connections.id })
+    .from(connections)
+    .where(
+      and(
+        eq(connections.projectId, projectId),
+        sql`lower(${connections.name}) = lower(${name})`,
+        excludeId ? ne(connections.id, excludeId) : undefined,
+      ),
+    )
+    .limit(1);
+  return rows.length > 0;
+}
 
 export async function listConnections(projectId?: string): Promise<Connection[]> {
   await ensureMigrated();

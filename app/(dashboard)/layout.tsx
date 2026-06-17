@@ -3,12 +3,18 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/s
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { I18nProvider } from "@/lib/i18n/client";
 import { getLocale, getDictionary } from "@/lib/i18n/server";
+import { translate } from "@/lib/i18n/translate";
+import { companyName } from "@/lib/server/config";
 import { authEnabled } from "@/lib/auth/config";
 import { LogoutButton } from "@/components/features/auth/logout-button";
 
 export default async function DashboardLayout({ children }: { children: ReactNode }) {
   const [locale, dict] = await Promise.all([getLocale(), getDictionary()]);
   const showLogout = authEnabled();
+  const company = companyName();
+  const title = company
+    ? translate(dict, "brand.companyTitle", { company })
+    : translate(dict, "brand.title");
   return (
     <I18nProvider locale={locale} dict={dict}>
       <SidebarProvider>
@@ -17,7 +23,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
         <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80">
           <SidebarTrigger className="-ml-1" />
           <span className="text-sm font-semibold tracking-tight text-foreground">
-            DBBS
+            {title}
           </span>
           {showLogout ? (
             <div className="ml-auto">

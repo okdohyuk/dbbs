@@ -3,6 +3,7 @@ import fsp from "node:fs/promises";
 import { getAdapter } from "@/lib/server/db/adapter";
 import type { ConnectionConfig } from "@/lib/server/db/adapter";
 import { emit, finishJob } from "@/lib/server/jobs/manager";
+import { describeJobError } from "@/lib/server/jobs/job-error";
 import { updateSnapshot } from "@/lib/server/store/repos/snapshots";
 import type { Engine, SnapshotOptions } from "@/lib/types";
 
@@ -35,7 +36,7 @@ export async function runSnapshotJob(args: {
     });
     finishJob(snapshotId, "completed");
   } catch (e) {
-    const message = e instanceof Error ? e.message : "Snapshot failed";
+    const message = describeJobError(e, "Snapshot failed");
     await fsp.rm(outPath, { force: true }).catch(() => {});
     await updateSnapshot(snapshotId, { status: "failed", error: message });
     finishJob(snapshotId, "failed", message);

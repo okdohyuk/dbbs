@@ -3,6 +3,8 @@
 const en = {
   brand: {
     tagline: "Database Backup",
+    title: "DBBS",
+    companyTitle: "{company}'s DBBS",
   },
   nav: {
     manage: "Manage",
@@ -169,6 +171,7 @@ const en = {
     colStatus: "Status",
     colCreated: "Created",
     colActions: "Actions",
+    download: "Download",
     deleteTitle: 'Delete "{name}"?',
     deleteDescription: "This deletes the snapshot record and its dump file.",
     deleteSuccess: "Snapshot deleted",
@@ -238,6 +241,10 @@ const en = {
     comingSoon: "· coming soon",
     engineComingSoon:
       "{engine} support is coming soon — MySQL and MariaDB are available now.",
+    loadFrom: "Load from existing connection (optional)",
+    loadFromPlaceholder: "Choose a connection to copy",
+    loadFromHint: "Copies type, host, port, user, and default database. Re-enter the password.",
+    duplicateName: 'A connection named "{name}" already exists in this project.',
     connectionName: "Connection name",
     namePlaceholder: "A — production",
     host: "Host",
@@ -286,6 +293,7 @@ const en = {
   jobProgress: {
     working: "Working…",
     transferred: "{bytes} transferred",
+    errorTitle: "Error",
   },
   snapshotWizard: {
     defaultName: "{db} snapshot",

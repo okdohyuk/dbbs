@@ -27,6 +27,7 @@ import {
   DEFAULT_ENGINE,
   getEngineInfo,
   isEngineSupported,
+  engineLabel,
 } from "@/lib/engines";
 import type { ConnectionPublic, ConnectionTestResult, Engine } from "@/lib/types";
 
@@ -36,10 +37,12 @@ export function ConnectionForm({
   projects,
   defaultProjectId,
   connection,
+  existingConnections = [],
 }: {
   projects: ProjectOption[];
   defaultProjectId?: string;
   connection?: ConnectionPublic;
+  existingConnections?: ConnectionPublic[];
 }) {
   const router = useRouter();
   const t = useT();
@@ -49,6 +52,7 @@ export function ConnectionForm({
     connection?.projectId ?? defaultProjectId ?? projects[0]?.id ?? "",
   );
   const [engine, setEngine] = useState<Engine>(connection?.engine ?? DEFAULT_ENGINE);
+  const [cloneSourceId, setCloneSourceId] = useState("");
   const [name, setName] = useState(connection?.name ?? "");
   const [host, setHost] = useState(connection?.host ?? "127.0.0.1");
   const [port, setPort] = useState(String(connection?.port ?? 3306));
@@ -98,6 +102,38 @@ export function ConnectionForm({
     setAvailableDbs([]);
   }
 
+  /** A name not already used by a connection in the selected project. */
+  function uniqueName(base: string): string {
+    const taken = new Set(
+      existingConnections
+        .filter((c) => c.projectId === projectId)
+        .map((c) => c.name.toLowerCase()),
+    );
+    if (!taken.has(base.toLowerCase())) return base;
+    let candidate = `${base} (copy)`;
+    let n = 1;
+    while (taken.has(candidate.toLowerCase())) {
+      n += 1;
+      candidate = `${base} (copy ${n})`;
+    }
+    return candidate;
+  }
+
+  // Prefill from an existing connection (password is never copied).
+  function cloneFrom(sourceId: string) {
+    const src = existingConnections.find((c) => c.id === sourceId);
+    if (!src) return;
+    setCloneSourceId(sourceId);
+    setEngine(src.engine);
+    setHost(src.host);
+    setPort(String(src.port));
+    setUser(src.user);
+    setDefaultDatabase(src.defaultDatabase ?? "");
+    setName(uniqueName(src.name));
+    setPassword("");
+    invalidateTest();
+  }
+
   function handleSave() {
     startSaving(async () => {
       const res = isEdit
@@ -131,6 +167,34 @@ export function ConnectionForm({
 
   return (
     <div className="max-w-2xl space-y-5">
+      {!isEdit && existingConnections.length > 0 && (
+        <div className="space-y-2 rounded-[12px] border border-border bg-muted/30 p-3">
+          <Label htmlFor="clone">{t("connectionForm.loadFrom")}</Label>
+          <Select
+            value={cloneSourceId}
+            onValueChange={(v) => cloneFrom(v as string)}
+            items={Object.fromEntries(
+              existingConnections.map((c) => [c.id, `${c.name} (${c.host})`]),
+            )}
+          >
+            <SelectTrigger id="clone" className="w-full" data-testid="clone-source">
+              <SelectValue placeholder={t("connectionForm.loadFromPlaceholder")} />
+            </SelectTrigger>
+            <SelectContent>
+              {existingConnections.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}
+                  <span className="ml-2 text-xs text-muted-foreground">
+                    {engineLabel(c.engine)} · {c.host}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">{t("connectionForm.loadFromHint")}</p>
+        </div>
+      )}
+
       {!isEdit && (
         <div className="space-y-2">
           <Label htmlFor="project">{t("connectionForm.project")}</Label>

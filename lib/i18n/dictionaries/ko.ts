@@ -4,6 +4,8 @@ import type { Dictionary } from "@/lib/i18n/dictionaries";
 const ko: Dictionary = {
   brand: {
     tagline: "데이터베이스 백업",
+    title: "DBBS",
+    companyTitle: "{company}의 DBBS",
   },
   nav: {
     manage: "관리",
@@ -170,6 +172,7 @@ const ko: Dictionary = {
     colStatus: "상태",
     colCreated: "생성일",
     colActions: "작업",
+    download: "다운로드",
     deleteTitle: '"{name}"을(를) 삭제할까요?',
     deleteDescription: "스냅샷 기록과 덤프 파일이 삭제됩니다.",
     deleteSuccess: "스냅샷이 삭제되었습니다",
@@ -238,6 +241,10 @@ const ko: Dictionary = {
     selectEngine: "데이터베이스 종류 선택",
     comingSoon: "· 곧 지원",
     engineComingSoon: "{engine}는 곧 지원됩니다 — 지금은 MySQL과 MariaDB를 사용할 수 있습니다.",
+    loadFrom: "기존 연결에서 불러오기 (선택)",
+    loadFromPlaceholder: "복사할 연결 선택",
+    loadFromHint: "종류·호스트·포트·사용자·기본 데이터베이스를 복사합니다. 비밀번호는 다시 입력하세요.",
+    duplicateName: '이 프로젝트에 "{name}" 이름의 연결이 이미 있습니다.',
     connectionName: "연결 이름",
     namePlaceholder: "A — production",
     host: "호스트",
@@ -286,6 +293,7 @@ const ko: Dictionary = {
   jobProgress: {
     working: "작업 중…",
     transferred: "{bytes} 전송됨",
+    errorTitle: "오류",
   },
   snapshotWizard: {
     defaultName: "{db} 스냅샷",

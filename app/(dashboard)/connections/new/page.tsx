@@ -5,6 +5,8 @@ import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/features/common/empty-state";
 import { ConnectionForm } from "@/components/features/connections/connection-form";
 import { listProjects } from "@/lib/server/store/repos/projects";
+import { listConnections } from "@/lib/server/store/repos/connections";
+import { toConnectionPublicList } from "@/lib/dto";
 import { getT } from "@/lib/i18n/server";
 import { FolderOpen } from "lucide-react";
 
@@ -17,7 +19,7 @@ export default async function NewConnectionPage({
 }) {
   const t = await getT();
   const { projectId } = await searchParams;
-  const projects = await listProjects();
+  const [projects, connections] = await Promise.all([listProjects(), listConnections()]);
 
   return (
     <div>
@@ -38,6 +40,7 @@ export default async function NewConnectionPage({
             <ConnectionForm
               projects={projects.map((p) => ({ id: p.id, name: p.name }))}
               defaultProjectId={projectId}
+              existingConnections={toConnectionPublicList(connections)}
             />
           </CardContent>
         </Card>

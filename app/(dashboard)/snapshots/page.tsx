@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { HardDriveDownload, HardDriveUpload } from "lucide-react";
+import { Download, HardDriveDownload, HardDriveUpload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -100,13 +100,32 @@ export default async function SnapshotsPage() {
                     </TableCell>
                     <TableCell>{formatBytes(s.bytes)}</TableCell>
                     <TableCell>
-                      <StatusBadge status={s.status} />
+                      <span title={s.error ?? undefined}>
+                        <StatusBadge status={s.status} />
+                      </span>
+                      {s.status === "failed" && s.error ? (
+                        <p className="mt-1 max-w-[28ch] truncate text-xs text-destructive" title={s.error}>
+                          {s.error}
+                        </p>
+                      ) : null}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {formatDateTime(s.createdAt)}
                     </TableCell>
                     <TableCell className="pr-6">
                       <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={s.status !== "completed"}
+                          render={
+                            s.status === "completed" ? (
+                              <a href={`/api/snapshots/${s.id}/download`} download />
+                            ) : undefined
+                          }
+                        >
+                          <Download /> {t("snapshotsList.download")}
+                        </Button>
                         <Button
                           variant="ghost"
                           size="sm"
